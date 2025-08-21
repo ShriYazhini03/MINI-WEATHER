@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mini Weather App</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(135deg, #e6ccff 0%, #d1b3ff 100%);
+      color: #222;
+      transition: background 0.7s, color 0.5s;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body.dark {
+      background: #000;
+      color: #ccc;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 30px auto;
+      background: rgba(255,255,255,0.75);
+      border-radius: 15px;
+      padding: 25px 30px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      transition: background 0.5s;
+    }
+
+    body.dark .container {
+      background: rgba(20,20,20,0.8);
+      box-shadow: 0 6px 30px rgba(0,0,0,0.6);
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2.8rem;
+    }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    input[type="text"] {
+      flex-grow: 1;
+      min-width: 220px;
+      padding: 12px 15px;
+      font-size: 1rem;
+      border-radius: 30px;
+      border: 2px solid #68b0e8;
+    }
+
+    button {
+      padding: 10px 15px;
+      font-size: 1rem;
+      border-radius: 30px;
+      border: none;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      background: #4a90e2;
+    }
+
+    #toggleMode {
+      background: #333;
+    }
+
+    body.dark #toggleMode {
+      background: #68b0e8;
+      color: #000;
+    }
+
+    .date-time {
+      text-align: center;
+      font-weight: bold;
+    }
+
+    #cityName {
+      text-align: center;
+      font-size: 1.8rem;
+      margin: 10px 0;
+    }
+
+    .forecast {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 10px 0;
+    }
+
+    .day {
+      background: rgba(255,255,255,0.9);
+      padding: 10px;
+      border-radius: 12px;
+      flex-shrink: 0;
+      width: 130px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    body.dark .day {
+      background: rgba(40,40,40,0.85);
+    }
+
+    .icons {
+      width: 50px;
+      height: 50px;
+    }
+
+    /* Snowflakes */
+    .snowflake {
+      position: fixed;
+      top: -2em;
+      font-size: 1.2em;
+      pointer-events: none;
+      color: #ccc;
+      z-index: 9999;
+      animation: fall linear infinite;
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(100vh); }
+    }
+
+    /* Rain Drops */
+    .rain-drop {
+      position: fixed;
+      width: 2px;
+      height: 15px;
+      background: #9ecfff;
+      opacity: 0.6;
+      pointer-events: none;
+      animation: rainFall linear infinite;
+      z-index: 9999;
+    }
+
+    @keyframes rainFall {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(100vh); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Mini Weather App ☀️🌧️❄️</h1>
+    <div class="header">
+      <input type="text" id="cityInput" placeholder="Enter city name" />
+      <button id="searchBtn">Search 🔍</button>
+      <button id="locationBtn">Use My Location 📍</button>
+      <button id="toggleMode">Toggle Dark/Normal 🌗</button>
+    </div>
+    <div class="date-time" id="dateTime"></div>
+    <h2 id="cityName"></h2>
+    <div class="forecast" id="forecast"></div>
+  </div>
+
+  <script>
+    const emojiMap = {
+      Clear: "☀️", Clouds: "☁️", Rain: "🌧️", Drizzle: "🌦️",
+      Thunderstorm: "⛈️", Snow: "❄️", Mist: "🌫️", Fog: "🌫️", Haze: "🌫️",
+      Dust: "🌫️", Ash: "🌫️", Tornado: "🌪️"
+    };
+
+    const forecastEl = document.getElementById('forecast');
+    const cityNameEl = document.getElementById('cityName');
+    const dateTimeEl = document.getElementById('dateTime');
+    const cityInput = document.getElementById('cityInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const locationBtn = document.getElementById('locationBtn');
+    const toggleModeBtn = document.getElementById('toggleMode');
+
+    let darkMode = false;
+
+    function updateDateTime() {
+      const now = new Date();
+      dateTimeEl.textContent = now.toLocaleString();
+    }
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+
+    function createSnowflake() {
+      if (darkMode) return;
+      const flake = document.createElement('div');
+      flake.className = 'snowflake';
+      flake.textContent = '❄️';
+      flake.style.left = Math.random() * window.innerWidth + 'px';
+      flake.style.animationDuration = (6 + Math.random() * 5) + 's';
+      document.body.appendChild(flake);
+      setTimeout(() => flake.remove(), 11000);
+    }
+
+    function createRainDrop() {
+      if (!darkMode) return;
+      const drop = document.createElement('div');
+      drop.className = 'rain-drop';
+      drop.style.left = Math.random() * window.innerWidth + 'px';
+      drop.style.height = (10 + Math.random() * 15) + 'px';
+      drop.style.animationDuration = (0.6 + Math.random() * 0.5) + 's';
+      document.body.appendChild(drop);
+      setTimeout(() => drop.remove(), 4000);
+    }
+
+    let snowInterval = setInterval(createSnowflake, 250);
+    let rainInterval;
+
+    function startEffects() {
+      clearInterval(snowInterval);
+      clearInterval(rainInterval);
+      if (darkMode) {
+        rainInterval = setInterval(createRainDrop, 120);
+      } else {
+        snowInterval = setInterval(createSnowflake, 250);
+      }
+    }
+
+    toggleModeBtn.addEventListener('click', () => {
+      darkMode = !darkMode;
+      document.body.classList.toggle('dark', darkMode);
+      startEffects();
+    });
+
+    searchBtn.addEventListener('click', () => {
+      const city = cityInput.value.trim();
+      if (city) fetchWeather({ city });
+    });
+
+    locationBtn.addEventListener('click', () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          fetchWeather({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        }, err => alert("Location access denied."));
+      } else {
+        alert("Geolocation not supported.");
+      }
+    });
+
+    function fetchWeather(params) {
+      let url = "/weather?";
+      if (params.city) url += `city=${encodeURIComponent(params.city)}`;
+      else if (params.lat && params.lon) url += `lat=${params.lat}&lon=${params.lon}`;
+
+      fetch(url).then(res => res.json()).then(data => {
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        cityNameEl.textContent = data.city;
+        forecastEl.innerHTML = "";
+
+        data.forecast.forEach(day => {
+          const emoji = emojiMap[day.condition] || '';
+          const iconUrl = `http://openweathermap.org/img/wn/${day.icon}@2x.png`;
+          const date = new Date(day.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+
+          const div = document.createElement('div');
+          div.className = 'day';
+          div.innerHTML = `
+            <h4>${date}</h4>
+            <img src="${iconUrl}" class="icons" />
+            <div>${emoji} ${day.condition}</div>
+            <div>🌡️ ${day.temp.toFixed(1)}°C</div>
+            <div>💧 ${day.humidity}%</div>
+          `;
+          forecastEl.appendChild(div);
+        });
+      }).catch(() => alert("Failed to fetch weather."));
+    }
+
+    // Default load
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        fetchWeather({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+      }, () => fetchWeather({ city: "Chennai" }));
+    } else {
+      fetchWeather({ city: "Chennai" });
+    }
+  </script>
+</body>
+</html>
